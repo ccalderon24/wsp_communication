@@ -1,0 +1,17 @@
+# WhatsApp Business API Credentials
+# Copia este archivo como .env y completa con tus credenciales
+# Obtén estas credenciales desde: https://developers.facebook.com/apps/
+
+# Access Token de tu app de Facebook
+WHATSAPP_ACCESS_TOKEN=your_access_token_here
+
+# Phone Number ID (ID del número de teléfono de WhatsApp Business)
+WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id_here
+
+# Tu número personal (formato: código_país + número, sin + ni espacios)
+# Ejemplo: 5491123456789 (Argentina)
+YOUR_PHONE_NUMBER=your_phone_number_here
+
+# API Version (opcional, por defecto usa la más reciente)
+WHATSAPP_API_VERSION=v21.0
+
