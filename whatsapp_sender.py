@@ -51,14 +51,17 @@ class WhatsAppSender:
         self, 
         to: str, 
         message: str,
-        message_type: str = "utility"
+        message_type: str = "text"
     ) -> Dict[str, Any]:
         """
         Envía un mensaje de texto
         
         Nota: Los mensajes de texto son GRATUITOS si están dentro de la ventana de 24 horas
         desde la última interacción del usuario. El parámetro message_type se mantiene por
-        compatibilidad pero no afecta el costo del mensaje.
+        compatibilidad pero NO se usa en el payload (siempre se envía como "text").
+        
+        IMPORTANTE: Para enviar mensajes de utilidad/servicio como templates (fuera de ventana de 24h),
+        usa send_template_message() con una plantilla aprobada de tipo utility o service.
         
         Args:
             to: Número de teléfono del destinatario (formato: código_país + número)
@@ -70,6 +73,8 @@ class WhatsAppSender:
         """
         formatted_phone = self._format_phone_number(to)
         
+        # Los mensajes de texto simples SIEMPRE deben tener type: "text"
+        # Los tipos "utility" y "service" solo aplican a templates
         payload = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
@@ -163,25 +168,134 @@ class WhatsAppSender:
                     error_msg += f"\nStatus: {e.response.status_code}"
             raise Exception(error_msg)
     
-    def send_utility_message(self, to: str, message: str) -> Dict[str, Any]:
+    def send_utility_message(
+        self, 
+        to: str, 
+        template_name: str,
+        parameters: list = None,
+        language_code: str = "es"
+    ) -> Dict[str, Any]:
         """
-        Envía un mensaje de texto (gratuito dentro de ventana de 24 horas)
-        Útil para notificaciones de utilidad como confirmaciones, recordatorios, etc.
+        Envía un mensaje usando una plantilla de tipo UTILITY (template)
         
-        Nota: Este mensaje es gratuito si el usuario ha interactuado contigo en las últimas 24 horas.
-        Para mensajes fuera de esta ventana, usa plantillas de tipo "utility".
+        IMPORTANTE: Este método envía un TEMPLATE de utilidad, NO un mensaje de texto simple.
+        Los templates de utilidad se usan para mensajes fuera de la ventana de 24 horas
+        y pueden incurrir en costos según la tarifa de WhatsApp Business API.
+        
+        Args:
+            to: Número de teléfono del destinatario
+            template_name: Nombre de la plantilla aprobada de tipo "utility"
+            parameters: Lista de parámetros para la plantilla (opcional)
+            language_code: Código de idioma (por defecto 'es')
+        
+        Returns:
+            Respuesta de la API de WhatsApp
+        
+        Ejemplo:
+            sender.send_utility_message(
+                to="5693443695",
+                template_name="order_confirmation",
+                parameters=["Jessica", "SKBUP2-4CPIG9"],
+                language_code="es"
+            )
         """
-        return self.send_text_message(to, message, message_type="utility")
+        return self.send_utility_template(
+            to=to,
+            template_name=template_name,
+            parameters=parameters,
+            language_code=language_code
+        )
     
     def send_service_message(self, to: str, message: str) -> Dict[str, Any]:
         """
-        Envía un mensaje de texto (gratuito dentro de ventana de 24 horas)
+        Envía un mensaje de texto simple (gratuito dentro de ventana de 24 horas)
         Útil para mensajes de servicio al cliente, soporte, etc.
         
-        Nota: Este mensaje es gratuito si el usuario ha interactuado contigo en las últimas 24 horas.
-        Para mensajes fuera de esta ventana, usa plantillas de tipo "service".
+        IMPORTANTE: Este método envía un mensaje de texto simple (type: "text"), NO un template.
+        Es gratuito SOLO si el usuario ha interactuado contigo en las últimas 24 horas.
+        
+        Para enviar mensajes de servicio como TEMPLATES (fuera de ventana de 24h), usa:
+        send_template_message() con una plantilla aprobada de tipo "service".
         """
-        return self.send_text_message(to, message, message_type="service")
+        return self.send_text_message(to, message)
+    
+    def send_utility_template(
+        self,
+        to: str,
+        template_name: str,
+        parameters: list = None,
+        language_code: str = "es"
+    ) -> Dict[str, Any]:
+        """
+        Envía un mensaje usando una plantilla de tipo UTILITY (fuera de ventana de 24 horas)
+        
+        Args:
+            to: Número de teléfono del destinatario
+            template_name: Nombre de la plantilla aprobada de tipo "utility"
+            parameters: Lista de parámetros para la plantilla (opcional)
+            language_code: Código de idioma (por defecto 'es')
+        
+        Returns:
+            Respuesta de la API de WhatsApp
+        
+        Ejemplo:
+            sender.send_utility_template(
+                to="5693443695",
+                template_name="order_confirmation",
+                parameters=["Jessica", "SKBUP2-4CPIG9"],
+                language_code="es"
+            )
+        """
+        components = None
+        if parameters:
+            components = [{
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": param} for param in parameters
+                ]
+            }]
+        
+        return self.send_template_message(
+            to=to,
+            template_name=template_name,
+            language_code=language_code,
+            components=components
+        )
+    
+    def send_service_template(
+        self,
+        to: str,
+        template_name: str,
+        parameters: list = None,
+        language_code: str = "es"
+    ) -> Dict[str, Any]:
+        """
+        Envía un mensaje usando una plantilla de tipo SERVICE (fuera de ventana de 24 horas)
+        
+        Args:
+            to: Número de teléfono del destinatario
+            template_name: Nombre de la plantilla aprobada de tipo "service"
+            parameters: Lista de parámetros para la plantilla (opcional)
+            language_code: Código de idioma (por defecto 'es')
+        
+        Returns:
+            Respuesta de la API de WhatsApp
+        """
+        components = None
+        if parameters:
+            components = [{
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": param} for param in parameters
+                ]
+            }]
+        
+        return self.send_template_message(
+            to=to,
+            template_name=template_name,
+            language_code=language_code,
+            components=components
+        )
 
 
 def main():
@@ -199,19 +313,23 @@ def main():
         print("\n🚀 WhatsApp Business API - Testing\n")
         print("=" * 50)
         
-        # Ejemplo 1: Mensaje de utilidad
-        print("\n📤 Enviando mensaje de UTILIDAD...")
-        utility_message = "🔔 Este es un mensaje de prueba de tipo UTILIDAD. " \
-                         "Este tipo de mensaje es gratuito dentro de la ventana de 24 horas" \
-                         "importantes como confirmaciones, recordatorios, etc. Despues de 24 horas, se debe usar una plantilla."
+        # Ejemplo 1: Mensaje de utilidad (template)
+        print("\n📤 Enviando mensaje de UTILIDAD (template)...")
+        print("   Usando plantilla 'hello_world' (template por defecto de Meta)")
         
         message_ids = []
         
         try:
-            result = sender.send_utility_message(your_phone, utility_message)
+            # Enviar template de utilidad usando hello_world (sin parámetros)
+            result = sender.send_utility_message(
+                to=your_phone,
+                template_name="hello_world",
+                parameters=None,  # hello_world no requiere parámetros
+                language_code="es"
+            )
             message_id = result.get('messages', [{}])[0].get('id', 'N/A')
             message_ids.append(message_id)
-            print("✅ Mensaje de utilidad enviado exitosamente!")
+            print("✅ Mensaje de utilidad (template) enviado exitosamente!")
             print(f"   Message ID: {message_id}")
         except Exception as e:
             print(f"❌ Error: {e}")

@@ -10,24 +10,19 @@ load_dotenv()
 
 
 def ejemplo_mensaje_utilidad():
-    """Ejemplo de mensaje de utilidad"""
+    """Ejemplo de mensaje de utilidad usando template"""
     sender = WhatsAppSender()
     phone = os.getenv('YOUR_PHONE_NUMBER')
     
-    mensaje = """
-🔔 Notificación de Utilidad
-
-Tu reserva ha sido confirmada:
-- Fecha: 15 de Enero, 2024
-- Hora: 18:00
-- Referencia: #RES-12345
-
-Gracias por elegirnos.
-"""
-    
+    # Ejemplo: Enviar template de utilidad usando hello_world (template por defecto de Meta)
     try:
-        result = sender.send_utility_message(phone, mensaje.strip())
-        print("✅ Mensaje de utilidad enviado")
+        result = sender.send_utility_message(
+            to=phone,
+            template_name="hello_world",  # Template por defecto de Meta
+            parameters=None,  # hello_world no requiere parámetros
+            language_code="es"
+        )
+        print("✅ Mensaje de utilidad (template) enviado")
         print(f"ID: {result.get('messages', [{}])[0].get('id')}")
     except Exception as e:
         print(f"❌ Error: {e}")
