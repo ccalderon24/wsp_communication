@@ -6,6 +6,7 @@ Uso: python mandar_msg_v2.py [free|template|auth|utility|marketing] [--phone=569
 import sys
 import os
 import argparse
+from pathlib import Path
 from whatsapp_sender_v2 import WhatsAppSender
 from dotenv import load_dotenv
 
@@ -23,12 +24,12 @@ DEFAULT_PHONE = "5693443695"
 # Valores hardcoded para plantillas
 DEFAULT_AUTH_TEMPLATE = "nombre_plantilla_auth"  # Cambiar por el nombre real de tu plantilla
 DEFAULT_AUTH_CODE = "123456"  # Código OTP por defecto
-DEFAULT_UTILITY_TEMPLATE = "nombre_plantilla_utility"  # Cambiar por el nombre real
-DEFAULT_UTILITY_PARAMS = ["param1", "param2"]  # Parámetros por defecto
-DEFAULT_MARKETING_TEMPLATE = "nombre_plantilla_marketing"  # Cambiar por el nombre real
-DEFAULT_MARKETING_PARAMS = ["param1", "param2"]  # Parámetros por defecto
-DEFAULT_MARKETING_IMAGE_URL = None  # URL de imagen por defecto (None si no hay)
-DEFAULT_LANGUAGE_CODE = "es"  # Código de idioma por defecto
+DEFAULT_UTILITY_TEMPLATE = "crpc_bienvenida"  # Plantilla de bienvenida sin parámetros
+DEFAULT_UTILITY_PARAMS = []  # Sin parámetros
+DEFAULT_MARKETING_TEMPLATE = "viaje_recordatorio_cprc"  # Cambiar por el nombre real
+DEFAULT_MARKETING_PARAMS = ["Osvaldo"]  # Parámetros por defecto
+DEFAULT_MARKETING_IMAGE_URL = "~/Downloads/crpc_logo.jpeg"  # Ruta local o URL de imagen por defecto
+DEFAULT_LANGUAGE_CODE = "es_CL"  # Código de idioma por defecto (español de Chile)
 
 
 def get_phone_number(phone_arg: str = None) -> str:
@@ -172,11 +173,14 @@ def send_utility_message(phone: str):
         
         # Valores hardcoded
         template_name = DEFAULT_UTILITY_TEMPLATE
-        params = DEFAULT_UTILITY_PARAMS.copy()
+        params = DEFAULT_UTILITY_PARAMS.copy() if DEFAULT_UTILITY_PARAMS else None
         language_code = DEFAULT_LANGUAGE_CODE
         
         print(f"\n📋 Plantilla: {template_name}")
-        print(f"📝 Parámetros: {params}")
+        if params:
+            print(f"📝 Parámetros: {params}")
+        else:
+            print(f"📝 Parámetros: Ninguno")
         print(f"🌐 Idioma: {language_code}")
         print(f"\n📤 Enviando mensaje de utilidad a {phone}...")
         
@@ -206,12 +210,39 @@ def send_marketing_message(phone: str):
         header_image_url = DEFAULT_MARKETING_IMAGE_URL
         language_code = DEFAULT_LANGUAGE_CODE
         
+        # Si no hay URL de imagen configurada, solicitar al usuario
+        if not header_image_url:
+            print(f"\n📋 Plantilla: {template_name}")
+            print("⚠️  Esta plantilla requiere una imagen en el header.")
+            image_input = input("🖼️  Ingresa la URL de la imagen o la ruta local del archivo: ").strip()
+            if not image_input:
+                print("❌ La plantilla requiere una imagen en el header. No se puede enviar sin ella.")
+                return
+            header_image_url = image_input
+        
+        # Si es una ruta local, subirla a WhatsApp
+        if os.path.exists(header_image_url) or Path(header_image_url).expanduser().exists():
+            image_path = Path(header_image_url).expanduser()
+            if not image_path.exists():
+                # Intentar con ruta absoluta desde Downloads
+                downloads_path = Path.home() / "Downloads" / header_image_url
+                if downloads_path.exists():
+                    image_path = downloads_path
+                else:
+                    print(f"❌ No se encontró el archivo: {header_image_url}")
+                    return
+            
+            print(f"📤 Subiendo imagen desde: {image_path}")
+            try:
+                header_image_url = sender.upload_media(str(image_path))
+                print(f"✅ Imagen subida exitosamente. URL: {header_image_url[:50]}...")
+            except Exception as e:
+                print(f"❌ Error al subir la imagen: {e}")
+                return
+        
         print(f"\n📋 Plantilla: {template_name}")
         print(f"📝 Parámetros: {params}")
-        if header_image_url:
-            print(f"🖼️  Imagen header: {header_image_url}")
-        else:
-            print("🖼️  Imagen header: No")
+        print(f"🖼️  Imagen header: {header_image_url[:80]}..." if len(header_image_url) > 80 else f"🖼️  Imagen header: {header_image_url}")
         print(f"🌐 Idioma: {language_code}")
         print(f"\n📤 Enviando mensaje de marketing a {phone}...")
         
