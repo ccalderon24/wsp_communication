@@ -7,10 +7,10 @@ load_dotenv()
 
 # Número destino, ajústalo si quieres
 destino = os.getenv('MARKETING_TEST_PHONE', '56993443695')  # Cambia aquí el número si quieres
-TEMPLATE = os.getenv('MARKETING_TEMPLATE', 'viaje_recordatorio_cprc')
-PARAMS = ['Osvaldo']  # Ajusta según plantilla
+TEMPLATE = "appointment_reminder"
+PARAMS = ["Osvaldo", "10:00 AM"]     # Primer parámetro: nombre, segundo: fecha/hora
 IMAGE_PATH = os.getenv('MARKETING_IMAGE_PATH', '').strip()
-IDIOMA = os.getenv('MARKETING_LANG', 'es_CL')
+IDIOMA = os.getenv('MARKETING_LANG', 'es')
 
 
 def main():
